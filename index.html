@@ -61,32 +61,10 @@ body{
 .music{width:3.6vw;height:3.6vw;border-radius:50%;gap:0}
 .music svg{width:1.6vw;height:1.6vw}
 .music.off{opacity:.55}
-/* ambi-glow: soft colour flow on the screen edges for Philips Ambilight */
-.ambi-glow{
-  position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
-  -webkit-mask-image:linear-gradient(to right,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to left,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to bottom,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to top,#000 0,#000 1vw,transparent 3.5vw);
-          mask-image:linear-gradient(to right,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to left,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to bottom,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to top,#000 0,#000 1vw,transparent 3.5vw);
-  opacity:1;
-}
-.ambi-glow::before{
-  content:""; position:absolute; left:50%; top:50%;
-  width:200vmax; height:200vmax; margin:-100vmax 0 0 -100vmax;
-  background:conic-gradient(from 0deg, #d9a21b, #ffffff, #2f9ff0, #0a3f7a, #13b4dc, #ffffff, #e0ad2a, #2f9ff0, #0a3f7a, #d9a21b);
-  animation:ambi-spin 50s linear infinite;
-  will-change:transform;
-}
-.ambi-glow::after{
-  content:""; position:absolute; inset:0;
-  box-shadow:inset 0 0 1vw 0 rgba(255,255,255,.3);
-  animation:ambi-breathe 12s ease-in-out infinite;
-}
-@keyframes ambi-spin{to{transform:rotate(360deg)}}
-@keyframes ambi-breathe{0%,100%{opacity:.3}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.app{transition:none}.app:focus,.app:hover{transform:none}.ambi-glow::before,.ambi-glow::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.app{transition:none}.app:focus,.app:hover{transform:none}}
 </style>
 </head>
 <body>
-<div class="ambi-glow" aria-hidden="true"></div>
 <div class="side" aria-live="polite">
   <div class="greet" id="greet">ערב טוב</div>
   <div class="name">אוהד בסון</div>
@@ -126,7 +104,7 @@ const VOL=.35;
 let st=0, hostIdx=0, musicOn=true, fadeT=null, playing=false;
 const audio=new Audio(); audio.preload='none'; audio.volume=0;
 const toast=document.createElement('div');
-toast.style.cssText='position:absolute;z-index:3;bottom:15vh;left:4.5vw;max-width:30vw;font-family:"Frank Ruhl Libre",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff,0 0 .3vw #fff;opacity:0;transition:opacity .4s';
+toast.style.cssText='position:absolute;bottom:11vh;left:4.5vw;max-width:30vw;font-family:"Frank Ruhl Libre",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff,0 0 .3vw #fff;opacity:0;transition:opacity .4s';
 document.body.appendChild(toast);
 function showToast(t,ms){ toast.textContent=t; toast.style.opacity=1; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.opacity=0,ms||2500); }
 function fadeTo(v,ms,done){
