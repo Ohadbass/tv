@@ -94,47 +94,56 @@ function tick(){
 tick(); setInterval(tick,10000);
 
 /* ---------- Lounge radio (SomaFM, listener-supported, no ads) ---------- */
+const HOSTS=['ice1','ice2','ice4','ice6'];
 const STATIONS=[
-  {name:'Groove Salad', url:'https://ice.somafm.com/groovesalad'},
-  {name:'Lush',         url:'https://ice.somafm.com/lush'},
-  {name:'Secret Agent', url:'https://ice.somafm.com/secretagent'}
+  {name:'Groove Salad', id:'groovesalad'},
+  {name:'Lush',         id:'lush'},
+  {name:'Secret Agent', id:'secretagent'}
 ];
 const VOL=.35;
-let st=0, musicOn=true, fadeT=null;
+let st=0, hostIdx=0, musicOn=true, fadeT=null, playing=false;
 const audio=new Audio(); audio.preload='none'; audio.volume=0;
+const toast=document.createElement('div');
+toast.style.cssText='position:absolute;bottom:11vh;left:4.5vw;max-width:30vw;font-family:"Frank Ruhl Libre",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff,0 0 .3vw #fff;opacity:0;transition:opacity .4s';
+document.body.appendChild(toast);
+function showToast(t,ms){ toast.textContent=t; toast.style.opacity=1; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.opacity=0,ms||2500); }
 function fadeTo(v,ms,done){
   clearInterval(fadeT);
   const from=audio.volume, steps=Math.max(1,Math.round(ms/50)); let i=0;
   fadeT=setInterval(()=>{ i++; audio.volume=Math.min(1,Math.max(0,from+(v-from)*i/steps));
     if(i>=steps){clearInterval(fadeT); done&&done();} },50);
 }
+function streamUrl(){ return 'https://'+HOSTS[hostIdx]+'.somafm.com/'+STATIONS[st].id+'-128-mp3'; }
 function startMusic(){
-  if(!musicOn || (!audio.paused && audio.src)) return;
-  audio.src=STATIONS[st].url;          // fresh connection = live, not stale buffer
-  audio.volume=0;
-  audio.play().then(()=>fadeTo(VOL,3000)).catch(()=>{});
+  if(!musicOn || playing) return;
+  playing=true;
+  audio.src=streamUrl(); audio.volume=0;
+  audio.play().then(()=>fadeTo(VOL,3000)).catch(err=>{
+    playing=false;
+    if(err && err.name==='NotAllowedError') showToast('לחצו על מקש כלשהו להפעלת המוזיקה',4000);
+  });
 }
-function stopMusic(fast){
-  if(audio.paused) return;
-  fadeTo(0,fast?300:1200,()=>{ audio.pause(); audio.removeAttribute('src'); audio.load(); });
-}
-audio.addEventListener('error',()=>{ if(musicOn){ setTimeout(()=>{audio.removeAttribute('src');startMusic();},5000); } });
-const toast=document.createElement('div');
-toast.style.cssText='position:absolute;bottom:11vh;left:4.5vw;font-family:"Cormorant Garamond",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff;opacity:0;transition:opacity .4s';
-document.body.appendChild(toast);
-function showToast(t){ toast.textContent=t; toast.style.opacity=1; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.opacity=0,2500); }
+function hardStop(){ audio.pause(); audio.removeAttribute('src'); audio.load(); playing=false; }
+function stopMusic(fast){ if(!playing) return; fadeTo(0,fast?300:1200,hardStop); }
+audio.addEventListener('error',()=>{
+  if(!audio.getAttribute('src')) return;
+  playing=false;
+  hostIdx=(hostIdx+1)%HOSTS.length;
+  if(hostIdx===0){ showToast('אין חיבור לרדיו כרגע, מנסה שוב…',3000); setTimeout(startMusic,15000); }
+  else startMusic();
+});
 const musicBtn=document.getElementById('music');
 musicBtn.addEventListener('click',e=>{
-  e.preventDefault();
-  // cycle: station 1 → 2 → 3 → off → station 1
+  e.preventDefault(); e.stopPropagation();
   if(!musicOn){ musicOn=true; st=0; }
-  else if(st<STATIONS.length-1){ st++; }
-  else { musicOn=false; }
+  else if(playing && st<STATIONS.length-1){ st++; }
+  else if(playing){ musicOn=false; }
   musicBtn.classList.toggle('off',!musicOn);
-  if(audio.paused){ startMusic(); }
-  else { fadeTo(0,300,()=>{ audio.pause(); audio.removeAttribute('src'); audio.load(); startMusic(); }); }
+  clearInterval(fadeT); hardStop(); startMusic();
   showToast(musicOn ? '♪ '+STATIONS[st].name : 'מוזיקה כבויה');
 });
+// any interaction unlocks audio (browsers block sound until the first click/key)
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>startMusic(),{passive:true}));
 document.addEventListener('visibilitychange',()=>document.hidden?stopMusic(true):startMusic());
 window.addEventListener('load',()=>setTimeout(startMusic,600));
 
@@ -151,7 +160,6 @@ apps.filter(a=>a.dataset.pkg).forEach(a=>a.addEventListener('click',e=>{
   setTimeout(()=>{ location.href=intentFor(pkg,web); },250);
 }));
 document.addEventListener('keydown',e=>{
-  startMusic();
   const i=apps.indexOf(document.activeElement);
   if(e.key==='ArrowLeft'){apps[Math.min(apps.length-1,i+1)].focus();e.preventDefault();}
   if(e.key==='ArrowRight'){apps[Math.max(0,i-1)].focus();e.preventDefault();}
