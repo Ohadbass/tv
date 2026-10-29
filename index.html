@@ -61,10 +61,38 @@ body{
 .music{width:3.6vw;height:3.6vw;border-radius:50%;gap:0}
 .music svg{width:1.6vw;height:1.6vw}
 .music.off{opacity:.55}
+/* rss news ticker */
+.rss-btn{
+  width:auto; height:auto; padding:.25vw .6vw; border-radius:.5vw; margin-inline-start:.6vw;
+  font-family:"Cormorant Garamond",serif; font-size:.95vw; letter-spacing:.08em; direction:ltr;
+  background:transparent; border:1px solid transparent; opacity:.35; gap:0;
+}
+.rss-btn.on{opacity:.75}
+.rss-btn:focus,.rss-btn:hover{opacity:1}
+.ticker{
+  position:absolute; top:0; left:0; right:0; height:4.6vh; z-index:4;
+  display:flex; align-items:center; overflow:hidden; direction:rtl;
+  background:rgba(255,255,255,.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  border-bottom:1px solid rgba(168,131,63,.55);
+  transform:translateY(-100%); transition:transform .5s ease;
+}
+.ticker.show{transform:none}
+.ticker .tag{
+  flex:none; height:100%; display:flex; align-items:center; padding:0 1.2vw;
+  background:var(--navy); color:#fff; font-size:1.1vw; font-weight:500; z-index:1;
+}
+.ticker .track{flex:1; overflow:hidden; height:100%; position:relative}
+.ticker .run{
+  position:absolute; top:0; height:100%; display:flex; align-items:center; white-space:nowrap;
+  font-size:1.25vw; color:var(--navy); right:0; will-change:transform;
+}
+.ticker .run b{color:var(--gold-deep); font-weight:500; margin:0 .5vw 0 .3vw}
+.ticker .run i{font-style:normal; color:var(--gold); margin:0 1.4vw}
 @media (prefers-reduced-motion:reduce){.app{transition:none}.app:focus,.app:hover{transform:none}}
 </style>
 </head>
 <body>
+<div class="ticker" id="ticker" aria-live="polite"><div class="tag">מבזקי ynet</div><div class="track"><div class="run" id="tickerRun"></div></div></div>
 <div class="side" aria-live="polite">
   <div class="greet" id="greet">ערב טוב</div>
   <div class="name">אוהד בסון</div>
@@ -81,6 +109,7 @@ body{
   <a class="app" href="#" data-pkg="com.applicaster.il.ch1" data-web="https://www.kan.org.il/live/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="24" cy="24" r="4" fill="currentColor"/><path d="M15 15a13 13 0 0 0 0 18M33 15a13 13 0 0 1 0 18M9 9a21 21 0 0 0 0 30M39 9a21 21 0 0 1 0 30"/></svg><span class="lbl">כאן BOX</span></a>
   <a class="app" href="#" data-pkg="com.applicaster.iReshet" data-web="https://13tv.co.il/live/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="24" cy="24" r="4" fill="currentColor"/><path d="M15 15a13 13 0 0 0 0 18M33 15a13 13 0 0 1 0 18M9 9a21 21 0 0 0 0 30M39 9a21 21 0 0 1 0 30"/></svg><span class="lbl">רשת 13</span></a>
   <a class="app music" href="#" id="music" aria-label="מוזיקה"><svg viewBox="0 0 48 48" fill="currentColor"><path d="M18 8v24.5A7 7 0 1 0 22 39V18l18-4v14.5A7 7 0 1 0 44 35V4z"/></svg></a>
+  <a class="app rss-btn" href="#" id="rssBtn" aria-label="מבזקי חדשות">rss</a>
 </nav>
 
 <script>
@@ -104,7 +133,7 @@ const VOL=.35;
 let st=0, hostIdx=0, musicOn=true, fadeT=null, playing=false;
 const audio=new Audio(); audio.preload='none'; audio.volume=0;
 const toast=document.createElement('div');
-toast.style.cssText='position:absolute;bottom:11vh;left:4.5vw;max-width:30vw;font-family:"Frank Ruhl Libre",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff,0 0 .3vw #fff;opacity:0;transition:opacity .4s';
+toast.style.cssText='position:absolute;z-index:3;bottom:15vh;left:4.5vw;max-width:30vw;font-family:"Frank Ruhl Libre",serif;font-size:1.3vw;color:var(--navy);text-shadow:0 0 .8vw #fff,0 0 .3vw #fff;opacity:0;transition:opacity .4s';
 document.body.appendChild(toast);
 function showToast(t,ms){ toast.textContent=t; toast.style.opacity=1; clearTimeout(toast._t); toast._t=setTimeout(()=>toast.style.opacity=0,ms||2500); }
 function fadeTo(v,ms,done){
@@ -146,6 +175,46 @@ musicBtn.addEventListener('click',e=>{
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>startMusic(),{passive:true}));
 document.addEventListener('visibilitychange',()=>document.hidden?stopMusic(true):startMusic());
 window.addEventListener('load',()=>setTimeout(startMusic,600));
+
+
+/* ---------- ynet news ticker ---------- */
+const RSS_URL='https://www.ynet.co.il/Integration/StoryRss1854.xml';
+const NEWS_JSON='https://ohadbass.github.io/tv/news.json';
+const ticker=document.getElementById('ticker'), run=document.getElementById('tickerRun'), rssBtn=document.getElementById('rssBtn');
+let newsOn=false, newsTimer=null, anim=null;
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function hhmm(d){ d=new Date(d); return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+async function fetchNews(){
+  try{ // 1) direct RSS (works if the TV browser allows it)
+    const r=await fetch(RSS_URL,{cache:'no-store'}); const x=new DOMParser().parseFromString(await r.text(),'text/xml');
+    const items=[...x.querySelectorAll('item')].slice(0,15).map(it=>({title:it.querySelector('title')?.textContent.trim(),time:hhmm(it.querySelector('pubDate')?.textContent)}));
+    if(items.length) return items;
+  }catch(e){}
+  try{ // 2) copy refreshed every few minutes on GitHub
+    const r=await fetch(NEWS_JSON+'?t='+Date.now(),{cache:'no-store'}); const j=await r.json();
+    return (j.items||[]).slice(0,15);
+  }catch(e){}
+  return null;
+}
+function playTicker(items){
+  if(anim) anim.cancel();
+  run.innerHTML = items && items.length
+    ? items.filter(i=>i.title).map(i=>(i.time?'<b>'+esc(i.time)+'</b>':'')+esc(i.title)).join('<i>◆</i>')
+    : 'אין חיבור למבזקים כרגע';
+  const trackW=run.parentElement.offsetWidth, w=run.scrollWidth;
+  // Hebrew ticker: text enters from the left edge and moves right
+  const dur=Math.max(20000,(w+trackW)/90*1000);
+  anim=run.animate([{transform:'translateX('+(-trackW)+'px)'},{transform:'translateX('+w+'px)'}],{duration:dur,iterations:Infinity,easing:'linear'});
+}
+async function refreshNews(){ if(!newsOn) return; playTicker(await fetchNews()); }
+function setNews(on){
+  newsOn=on; ticker.classList.toggle('show',on); rssBtn.classList.toggle('on',on);
+  try{ localStorage.setItem('newsOn',on?'1':'0'); }catch(e){}
+  clearInterval(newsTimer);
+  if(on){ refreshNews(); newsTimer=setInterval(refreshNews,10*60*1000); } else if(anim){ anim.cancel(); }
+}
+rssBtn.addEventListener('click',e=>{e.preventDefault(); e.stopPropagation(); setNews(!newsOn);});
+try{ if(localStorage.getItem('newsOn')==='1') window.addEventListener('load',()=>setNews(true)); }catch(e){}
 
 /* ---------- App launching ---------- */
 function intentFor(pkg,web){

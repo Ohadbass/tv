@@ -1,0 +1,79 @@
+name: Refresh ynet news
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch ynet breaking-news RSS
+        run: |
+          python3 << 'PY'
+          import json
+          import urllib.request
+          import xml.etree.ElementTree as ET
+          from datetime import datetime
+          from email.utils import parsedate_to_datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          RSS_URL = "https://www.ynet.co.il/Integration/StoryRss1854.xml"
+          OUT = Path("news.json")
+          IL = ZoneInfo("Asia/Jerusalem")
+
+          req = urllib.request.Request(
+              RSS_URL,
+              headers={"User-Agent": "BassonResidenceTV/1.0"},
+          )
+          xml_bytes = urllib.request.urlopen(req, timeout=30).read()
+          root = ET.fromstring(xml_bytes)
+
+          items = []
+          for item in root.findall(".//item")[:15]:
+              title_el = item.find("title")
+              title = (title_el.text or "").strip() if title_el is not None else ""
+              pub_el = item.find("pubDate")
+              pub = (pub_el.text or "").strip() if pub_el is not None else ""
+              time_s = ""
+              if pub:
+                  try:
+                      time_s = parsedate_to_datetime(pub).astimezone(IL).strftime("%H:%M")
+                  except Exception:
+                      time_s = ""
+              if title:
+                  items.append({"title": title, "time": time_s})
+
+          if OUT.exists():
+              old = json.loads(OUT.read_text(encoding="utf-8"))
+              if old.get("items") == items:
+                  print("news items unchanged")
+                  raise SystemExit(0)
+
+          payload = {
+              "updated": datetime.now(IL).isoformat(timespec="seconds"),
+              "items": items,
+          }
+          OUT.write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          print(f"wrote {len(items)} items")
+          PY
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add news.json
+          if git diff --cached --quiet; then
+            echo "no news.json change"
+          else
+            git commit -m "Refresh ynet breaking news ticker."
+            git push
+          fi
