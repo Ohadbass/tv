@@ -64,15 +64,15 @@ body{
 /* ambi-glow: soft colour flow on the screen edges for Philips Ambilight */
 .ambi-glow{
   position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
-  -webkit-mask-image:linear-gradient(to right,#000 0,transparent 1.8vw),linear-gradient(to left,#000 0,transparent 1.8vw),linear-gradient(to bottom,#000 0,transparent 1.8vw),linear-gradient(to top,#000 0,transparent 1.8vw);
-          mask-image:linear-gradient(to right,#000 0,transparent 1.8vw),linear-gradient(to left,#000 0,transparent 1.8vw),linear-gradient(to bottom,#000 0,transparent 1.8vw),linear-gradient(to top,#000 0,transparent 1.8vw);
-  opacity:.75;
+  -webkit-mask-image:linear-gradient(to right,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to left,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to bottom,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to top,#000 0,#000 1vw,transparent 3.5vw);
+          mask-image:linear-gradient(to right,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to left,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to bottom,#000 0,#000 1vw,transparent 3.5vw),linear-gradient(to top,#000 0,#000 1vw,transparent 3.5vw);
+  opacity:1;
 }
 .ambi-glow::before{
   content:""; position:absolute; left:50%; top:50%;
   width:200vmax; height:200vmax; margin:-100vmax 0 0 -100vmax;
-  background:conic-gradient(from 0deg, #c9a24a, #f4fbff, #7cc4ec, #1f5f8b, #4fb3d9, #f4fbff, #d8b45c, #7cc4ec, #1f5f8b, #c9a24a);
-  animation:ambi-spin 90s linear infinite;
+  background:conic-gradient(from 0deg, #d9a21b, #ffffff, #2f9ff0, #0a3f7a, #13b4dc, #ffffff, #e0ad2a, #2f9ff0, #0a3f7a, #d9a21b);
+  animation:ambi-spin 50s linear infinite;
   will-change:transform;
 }
 .ambi-glow::after{
