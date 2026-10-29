@@ -7,7 +7,7 @@
 <title>Basson Residence · Master Bedroom</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;500&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;500&family=Heebo:wght@400;500;600&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --gold:#a8833f; --gold-deep:#8a6a2e; --navy:#1f4e6e;
@@ -70,7 +70,7 @@ body{
 .rss-btn.on{opacity:.75}
 .rss-btn:focus,.rss-btn:hover{opacity:1}
 .ticker{
-  position:absolute; top:0; left:0; right:0; height:4.6vh; z-index:4;
+  position:absolute; top:0; left:0; right:0; height:6.2vh; z-index:4;
   display:flex; align-items:center; overflow:hidden; direction:rtl;
   background:rgba(255,255,255,.55); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   border-bottom:1px solid rgba(168,131,63,.55);
@@ -79,14 +79,14 @@ body{
 .ticker.show{transform:none}
 .ticker .tag{
   flex:none; height:100%; display:flex; align-items:center; padding:0 1.2vw;
-  background:var(--navy); color:#fff; font-size:1.1vw; font-weight:500; z-index:1;
+  background:var(--navy); color:#fff; font-family:"Heebo",Arial,sans-serif; font-size:1.45vw; font-weight:600; z-index:1;
 }
 .ticker .track{flex:1; overflow:hidden; height:100%; position:relative}
 .ticker .run{
   position:absolute; top:0; height:100%; display:flex; align-items:center; white-space:nowrap;
-  font-size:1.25vw; color:var(--navy); right:0; will-change:transform;
+  font-family:"Heebo",Arial,sans-serif; font-size:1.75vw; font-weight:500; color:var(--navy); right:0; will-change:transform;
 }
-.ticker .run b{color:var(--gold-deep); font-weight:500; margin:0 .5vw 0 .3vw}
+.ticker .run b{color:var(--gold-deep); font-weight:600; margin:0 .6vw 0 .4vw}
 .ticker .run i{font-style:normal; color:var(--gold); margin:0 1.4vw}
 @media (prefers-reduced-motion:reduce){.app{transition:none}.app:focus,.app:hover{transform:none}}
 </style>
@@ -203,7 +203,9 @@ function playTicker(items){
     : 'אין חיבור למבזקים כרגע';
   const trackW=run.parentElement.offsetWidth, w=run.scrollWidth;
   // Hebrew ticker: text enters from the left edge and moves right
-  const dur=Math.max(20000,(w+trackW)/90*1000);
+  // slow, readable pace: ~2.5% of the screen width per second, whatever the TV resolution
+  const pxPerSec=window.innerWidth*0.025;
+  const dur=Math.max(30000,(w+trackW)/pxPerSec*1000);
   anim=run.animate([{transform:'translateX('+(-trackW)+'px)'},{transform:'translateX('+w+'px)'}],{duration:dur,iterations:Infinity,easing:'linear'});
 }
 async function refreshNews(){ if(!newsOn) return; playTicker(await fetchNews()); }
