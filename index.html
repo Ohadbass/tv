@@ -135,6 +135,7 @@ tick(); setInterval(tick,10000);
   function tryPlay(){
     try{
       v.muted=true;
+      v.volume=0;
       var p=v.play();
       if(p&&p.catch) p.catch(function(){});
     }catch(e){}
@@ -196,7 +197,14 @@ musicBtn.addEventListener('click',e=>{
 // any interaction unlocks audio (browsers block sound until the first click/key)
 ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,()=>startMusic(),{passive:true}));
 document.addEventListener('visibilitychange',()=>document.hidden?stopMusic(true):startMusic());
-window.addEventListener('load',()=>setTimeout(startMusic,600));
+// SomaFM rejects requests that carry the GitHub Pages referrer. The worker refetches the stream without it.
+const radioReady = navigator.serviceWorker
+  ? navigator.serviceWorker.register('sw.js').then(() => {
+      if (navigator.serviceWorker.controller) return;
+      return new Promise((resolve) => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), {once:true}));
+    }).catch(() => {})
+  : Promise.resolve();
+window.addEventListener('load', () => radioReady.then(() => setTimeout(startMusic, 600)));
 
 
 /* ---------- ynet news ticker ---------- */
